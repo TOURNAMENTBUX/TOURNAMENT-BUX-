@@ -1,67 +1,63 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+from discord.ui import View, Button
 import os
 
-PIX_CHAVE = "70b72ff2-ef70-487b-8f3f-eb6a96d56bb2"
-PIX_NOME = "LUCAS DA SILVA"
-
-PRODUTOS = {
-    "bux100": {"nome": "100 Bux", "preco": 28.33},
-    "bux200": {"nome": "200 Bux", "preco": 53.33},
-    "bux300": {"nome": "300 Bux", "preco": 78.33},
-}
+TOKEN = os.getenv("TOKEN")
+PIX_CHAVE = os.getenv("PIX_CHAVE")
 
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="!", intents=intents)
+intents.message_content = True
+intents.members = True
 
-class LojaView(discord.ui.View):
+bot = commands.Bot(command_prefix="/", intents=intents)
+
+# --- LOJA TOURNAMENT BUX - GIFT CARD ---
+PRODUTOS = {
+    "500": {"nome": "Gift Card 500 Robux", "preco": 28.33, "estoque": 1, "emoji": "🎁"},
+    "1000": {"nome": "Gift Card 1000 Robux", "preco": 53.33, "estoque": 1, "emoji": "🎁"},
+    "1500": {"nome": "Gift Card 1500 Robux", "preco": 78.33, "estoque": 1, "emoji": "🎁"},
+}
+
+class LojaView(View):
     def __init__(self):
         super().__init__(timeout=None)
+        for cod, prod in PRODUTOS.items():
+            if prod["estoque"] > 0:
+                label = f"{prod['nome']} - R$ {prod['preco']:.2f}"
+                style = discord.ButtonStyle.green
+                disabled = False
+            else:
+                label = f"{prod['nome']} - ❌ SEM ESTOQUE"
+                style = discord.ButtonStyle.gray
+                disabled = True
+            btn = Button(label=label, style=style, emoji=prod["emoji"], disabled=disabled)
+            btn.callback = self.criar_callback(cod, prod)
+            self.add_item(btn)
 
-    @discord.ui.button(label="100 Bux - R$ 28,33", style=discord.ButtonStyle.green, custom_id="bux100")
-    async def bux100(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_pagamento(interaction, "bux100")
-
-    @discord.ui.button(label="200 Bux - R$ 53,33", style=discord.ButtonStyle.blurple, custom_id="bux200")
-    async def bux200(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_pagamento(interaction, "bux200")
-
-    @discord.ui.button(label="300 Bux - R$ 78,33", style=discord.ButtonStyle.red, custom_id="bux300")
-    async def bux300(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_pagamento(interaction, "bux300")
-
-    async def mostrar_pagamento(self, interaction: discord.Interaction, produto_id: str):
-        produto = PRODUTOS[produto_id]
-        embed = discord.Embed(
-            title=f"🛒 Você escolheu {produto['nome']}",
-            description=f"**Valor:** R$ {produto['preco']:.2f}\n\n**1.** Faça o Pix para a chave abaixo\n**2.** Envie o comprovante aqui\n**3.** Aguarde a entrega do Produto",
-            color=0x00ff00
-        )
-        embed.add_field(name="🔑 Chave Pix (Aleatória)", value=f"```{PIX_CHAVE}```", inline=False)
-        embed.add_field(name="👤 Nome", value=PIX_NOME, inline=True)
-        embed.add_field(name="💰 Valor exato", value=f"R$ {produto['preco']:.2f}", inline=True)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    def criar_callback(self, cod, produto):
+        async def comprar_callback(interaction: discord.Interaction):
+            if produto["estoque"] <= 0:
+                return await interaction.response.send_message("❌ Esse Gift Card está SEM ESTOQUE no momento! A loja está em reabastecimento, volta já já!", ephemeral=True)
+            embed = discord.Embed(
+                title="✅ Pedido Criado - Tournament Bux",
+                description=f"Você selecionou **{produto['nome']}**\n\n**Valor: R$ {produto['preco']:.2f}**\n\n**Pague com Pix:**\n`{PIX_CHAVE}`\n\n1. Faça o Pix\n2. Mande o comprovante aqui\n3. Aguarde a entrega!",
+                color=0x00ff00
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        return comprar_callback
 
 @bot.event
 async def on_ready():
-    print(f"Logado como {bot.user}")
-    try:
-        synced = await bot.tree.sync()
-        print(f"Sincronizado {len(synced)} comandos")
-    except Exception as e:
-        print(e)
+    await bot.tree.sync()
+    print(f"✅ Bot {bot.user} ONLINE! Prefix: /")
 
-@bot.tree.command(name="loja", description="Abrir a loja Tournament Bux")
+@bot.tree.command(name="loja", description="Ver a loja Tournament Bux")
 async def loja(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="🏆 Tournament Bux - Loja Oficial",
-        description="Escolha seu pacote abaixo e pague via Pix!",
-        color=0xFFD700
-    )
-    embed.add_field(name="📦 100 Bux", value="R$ 28,33", inline=True)
-    embed.add_field(name="📦 200 Bux", value="R$ 53,33", inline=True)
-    embed.add_field(name="📦 300 Bux", value="R$ 78,33", inline=True)
+    embed = discord.Embed(title="🏆 LOJA TOURNAMENT BUX", description="Clique no Gift Card que deseja comprar!", color=0xFFD700)
+    for cod, info in PRODUTOS.items():
+        status = f"R$ {info['preco']:.2f} | Estoque: {info['estoque']}" if info['estoque'] > 0 else "❌ SEM ESTOQUE - EM REABASTECIMENTO"
+        embed.add_field(name=f"{info['emoji']} {info['nome']}", value=status, inline=False)
     await interaction.response.send_message(embed=embed, view=LojaView())
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+bot.run(TOKEN)
