@@ -28,7 +28,7 @@ class LojaView(View):
                 style = discord.ButtonStyle.green
                 disabled = False
             else:
-                label = f"{prod['nome']} - ❌ SEM ESTOQUE"
+                label = f"{prod['nome']} - SEM ESTOQUE"
                 style = discord.ButtonStyle.gray
                 disabled = True
             btn = Button(label=label, style=style, emoji=prod["emoji"], disabled=disabled)
@@ -38,10 +38,10 @@ class LojaView(View):
     def criar_callback(self, cod, produto):
         async def comprar_callback(interaction: discord.Interaction):
             if produto["estoque"] <= 0:
-                return await interaction.response.send_message("❌ Esse Gift Card está SEM ESTOQUE no momento! A loja está em reabastecimento, volta já já!", ephemeral=True)
+                return await interaction.response.send_message("Esse Gift Card esta SEM ESTOQUE no momento! A loja esta em reabastecimento, volta ja ja!", ephemeral=True)
             embed = discord.Embed(
-                title="✅ Pedido Criado - Tournament Bux",
-                description=f"Você selecionou **{produto['nome']}**\n\n**Valor: R$ {produto['preco']:.2f}**\n\n**Pague com Pix:**\n`{PIX_CHAVE}`\n\n1. Faça o Pix\n2. Mande o comprovante aqui\n3. Aguarde a entrega!",
+                title="Pedido Criado - Tournament Bux",
+                description=f"Voce selecionou **{produto['nome']}**\n\n**Valor: R$ {produto['preco']:.2f}**\n\n**Pague com Pix:**\n`{PIX_CHAVE}`\n\n1. Faca o Pix\n2. Mande o comprovante aqui\n3. Aguarde a entrega!",
                 color=0x00ff00
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -50,13 +50,16 @@ class LojaView(View):
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f"✅ Bot {bot.user} ONLINE! Prefix: /")
+    print(f"Bot {bot.user} ONLINE! Prefix: /")
 
 @bot.tree.command(name="loja", description="Ver a loja Tournament Bux")
 async def loja(interaction: discord.Interaction):
-    embed = discord.Embed(title="🏆 LOJA TOURNAMENT BUX", description="Clique no Gift Card que deseja comprar!", color=0xFFD700)
+    embed = discord.Embed(title="LOJA TOURNAMENT BUX", description="Clique no Gift Card que deseja comprar!", color=0xFFD700)
     for cod, info in PRODUTOS.items():
-        status = f"R$ {info['preco']:.2f} | Estoque: {info['estoque']}" if info['estoque'] > 0 else "❌ SEM ESTOQUE - EM REABASTECIMENTO"
+        if info["estoque"] > 0:
+            status = f"R$ {info['preco']:.2f} | Estoque: {info['estoque']}"
+        else:
+            status = "SEM ESTOQUE - EM REABASTECIMENTO"
         embed.add_field(name=f"{info['emoji']} {info['nome']}", value=status, inline=False)
     await interaction.response.send_message(embed=embed, view=LojaView())
 
