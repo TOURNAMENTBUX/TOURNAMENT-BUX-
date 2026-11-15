@@ -63,4 +63,4 @@ async def loja(interaction: discord.Interaction):
         embed.add_field(name=f"{info['emoji']} {info['nome']}", value=status, inline=False)
     await interaction.response.send_message(embed=embed, view=LojaView())
 
-bot.run(TOKEN)
+bot.run(os.getenv("TOKEN"))
